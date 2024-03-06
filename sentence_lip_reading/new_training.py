@@ -41,9 +41,10 @@ def extract_features(video_file_path):
 
 # Define a custom dataset for loading video files and their corresponding texts
 class LipReadingDataset(Dataset):
-    def __init__(self, video_files, texts):
+    def __init__(self, video_files, texts,tokenizer):
         self.video_files = video_files
         self.texts = texts
+        self.tokenizer = tokenizer
 
     def __len__(self):
         return len(self.video_files)
@@ -57,6 +58,8 @@ class LipReadingDataset(Dataset):
 
         # Tokenize the text
         text = self.texts[idx]
+        tokens = self.tokenizer.tokenize(text)
+        token_ids = self.tokenizer.convert_tokens_to_ids(tokens)
 
         return features, text
 
@@ -124,8 +127,8 @@ def evaluate_model(model, val_loader, criterion, device):
 # Main training loop
 def train():
     # Initialize model
-
-    model = LipReadingModel(num_classes=len(vocab_size))
+    tokenizer = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base-960h")
+    model = LipReadingModel(num_classes=len(tokenizer.vocab_size))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
 
@@ -134,9 +137,9 @@ def train():
     criterion = torch.nn.CTCLoss(blank=0)
 
     # Define data loaders
-    train_dataset = LipReadingDataset(train_video_files, train_texts)
+    train_dataset = LipReadingDataset(train_video_files, train_texts,tokenizer)
     train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
-    val_dataset = LipReadingDataset(val_video_files, val_texts)
+    val_dataset = LipReadingDataset(val_video_files, val_texts,tokenizer)
     val_loader = DataLoader(val_dataset, batch_size=16, shuffle=False)
 
     # Training loop
@@ -151,7 +154,8 @@ def train():
 
 # Load the trained model
 def load_model(model_path):
-    model = LipReadingModel(num_classes=len(vocab_size))
+    tokenizer = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base-960h")
+    model = LipReadingModel(num_classes=len(tokenizer.vocab_size))
     model.load_state_dict(torch.load(model_path))
     return model
 
