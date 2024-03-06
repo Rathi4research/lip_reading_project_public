@@ -39,7 +39,7 @@ def create_folder_if_not_existing(save_path):
 def load_model(path_weights, model):
     print("Loading weights...")
     # Retrieve the weights
-    loaded_weights = torch.load(path_weights)
+    loaded_weights = torch.load(path_weights,map_location=torch.device('cpu'))
     model_weight = model.state_dict()
     loaded_weights = {n: m for n, m in loaded_weights.items() if n in model_weight.keys() and m.size() == model_weight[n].size()}
 
@@ -85,11 +85,11 @@ def validation(model, network):
         for (iteration, input) in enumerate(validation_loader):
 
             # Load video to GPU        
-            video = input.get('video').cuda()             # (B, C, T, H, W)
+            video = input.get('video').cpu()            # (B, C, T, H, W)
             
 
             # Load label and lengths
-            txt_label = input.get('text').cuda()
+            txt_label = input.get('text').cpu()
 
             if show == True:
                 print('Text label : {}'.format(txt_label))
@@ -98,8 +98,8 @@ def validation(model, network):
             output = network(video)
 
             # Get the lengths
-            video_length = input.get('video_length').cuda()
-            txt_length = input.get('text_length').cuda()
+            video_length = input.get('video_length').cpu()
+            txt_length = input.get('text_length').cpu()
             if show == True:
                 print('Lengths : Video = {} / Text = '.format(video_length, txt_length))
             
@@ -192,13 +192,13 @@ def train(model, network):
             model.train()
 
             # Load the video on GPU
-            video = input.get('video').cuda()             # (B, C, T, H, W)
+            video = input.get('video').cpu()            # (B, C, T, H, W)
             
             # Reset gradient
             optimizer.zero_grad()
 
             # Load label and lengths on GPU
-            txt_label = input.get('text').cuda()
+            txt_label = input.get('text').cpu()
             if show == True:
                 print('Text label : {}'.format(txt_label))
 
@@ -206,8 +206,8 @@ def train(model, network):
             output_network = network(video)
 
             # Get the lengths
-            video_length = input.get('video_length').cuda()
-            txt_length = input.get('text_length').cuda()
+            video_length = input.get('video_length').cpu()
+            txt_length = input.get('text_length').cpu()
             if show == True:
                 print('Lengths : Video = {} / Text = '.format(video_length, txt_length))
 
@@ -286,10 +286,10 @@ def train(model, network):
 if __name__ == '__main__':
     print("Creating the model...")
     model = LipReadingNetwork(transformer=True)
-    model = model.cuda()
+    model = model.cpu()
     print("Model architecture : ")
-    summary(model, (3, 75, 64, 128))
-    network = nn.DataParallel(model).cuda()
+    # summary(model, (3, 75, 64, 128),device="cpu")
+    network = nn.DataParallel(model).cpu()
 
     # Load the weight if the file exists
     weight_exists = hasattr(options, 'weights')

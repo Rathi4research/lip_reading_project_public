@@ -29,9 +29,10 @@ class LipsDataset(Dataset):     # inherit Dataset
         # store the paths, the speakers and the name
         self.video_speaker_name = []
         for video in self.videos:
-            items = video.split('/')
+            items = video.split('\\')
             # video is the path to the folder that contains the images of the video, items[-5] is the speaker (ex: s23), items[-2] is the name of the folder (ex: bram4p)
-            self.video_speaker_name.append((video, items[-5], items[-2]))
+            # self.video_speaker_name.append((video, items[-5], items[-2]))
+            self.video_speaker_name.append((video, items[-3], items[-1]))
 
     def __len__(self):
         """Return data length"""
@@ -52,7 +53,8 @@ class LipsDataset(Dataset):     # inherit Dataset
 
         # load annotations from alignment file
         extension = '.align'
-        anno_path = os.path.join(self.alignment_path, speaker, 'align', name + extension)
+        # anno_path = os.path.join(self.alignment_path, speaker, 'align', name + extension)
+        anno_path = os.path.join(self.alignment_path, speaker, name + extension)
         annotation = self.load_annotation(anno_path)
         
         # load video and associated alignement file using the path
@@ -88,8 +90,9 @@ class LipsDataset(Dataset):     # inherit Dataset
     def is_jpeg(self, filename):
         """Return true if jpeg file"""
         idx = filename.find('.jpg') != -1
-        return idx != -1
-    
+        # return idx != -1
+        return idx
+
     def sort_file(self, file):
         return int(os.path.splitext(file)[0])
 
@@ -102,7 +105,7 @@ class LipsDataset(Dataset):     # inherit Dataset
         # Keep only jpeg
         loaded_files = list(filter(self.is_jpeg, loaded_files))
         # Sort
-        loaded_files = sorted(loaded_files, key=self.sort_file)
+        #loaded_files = sorted(loaded_files, key=self.sort_file)
         
         
         # Load the image and verify it's not None
