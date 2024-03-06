@@ -7,7 +7,6 @@ from transformers.models.clap.convert_clap_original_pytorch_to_hf import process
 from torchvision import transforms, models
 from PIL import Image
 
-vocab_size = 10000
 def extract_features(video_file_path):
     # Here you would implement your feature extraction logic using torchvision or any other library
     # For example, you can use a pre-trained CNN model to extract features from video frames
