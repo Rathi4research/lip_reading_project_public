@@ -1,0 +1,10 @@
+D:\\Codebase\\lip_reading_project_public\\sentence_lip_reading\\videos_for_training\\s1\\bbaf2n\\bbaf2n.mpg
+D:\\Codebase\\lip_reading_project_public\\sentence_lip_reading\\videos_for_training\\s1\\bbaf3s\\bbaf3s.mpg
+D:\\Codebase\\lip_reading_project_public\\sentence_lip_reading\\videos_for_training\\s1\\bbaf4p\\bbaf4p.mpg
+D:\\Codebase\\lip_reading_project_public\\sentence_lip_reading\\videos_for_training\\s1\\bbaf5a\\bbaf5a.mpg
+D:\\Codebase\\lip_reading_project_public\\sentence_lip_reading\\videos_for_training\\s1\\bbal6n\\bbal6n.mpg
+D:\\Codebase\\lip_reading_project_public\\sentence_lip_reading\\videos_for_training\\s1\\bbal7s\\bbal7s.mpg
+D:\\Codebase\\lip_reading_project_public\\sentence_lip_reading\\videos_for_training\\s1\\bbal8p\\bbal8p.mpg
+D:\\Codebase\\lip_reading_project_public\\sentence_lip_reading\\videos_for_training\\s1\\bbal9a\\bbal9a.mpg
+D:\\Codebase\\lip_reading_project_public\\sentence_lip_reading\\videos_for_training\\s1\\bbas1s\\bbas1s.mpg
+D:\\Codebase\\lip_reading_project_public\\sentence_lip_reading\\videos_for_training\\s1\\bbas2p\\bbas2p.mpg
