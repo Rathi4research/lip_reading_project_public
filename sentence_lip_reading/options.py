@@ -38,7 +38,7 @@ momentum=0.9
 
 # Stop the training
 # max_epoch = 200
-max_epoch = 25
+max_epoch = 50
 # Display training process to screen
 display = 1
 
@@ -47,13 +47,13 @@ test_step = 2000
 
 # Path to save the model
 # save_model_path = f'...path_to_where_you_want.../model_{training_method}_{model_name}'
-save_model_path = 'D:\\Codebase\\lip_reading_project_public\\sentence_lip_reading\\weights\\both_model'
-
+save_model_path = 'D:\\Codebase\\lip_reading_project_public\\sentence_lip_reading\\weights\\s1s2epoch50'
 # If true: Optimize the model that is located under the 'weights' path or a new model if no path is given
 optimize = True
 
 # Comment these 2 lines if you want to train a new model
 model = 'transformer'
-# weights = 'D:\Codebase\lip_reading_project_public\sentence_lip_reading\weights\model_unseen_dense3d_transformer_loss_0.7470988631248474_wer_0.2406666666666667_cer_0.1106539869955016.pt'
+weights = 'D:\Codebase\lip_reading_project_public\sentence_lip_reading\weights\model_unseen_dense3d_transformer_loss_0.7470988631248474_wer_0.2406666666666667_cer_0.1106539869955016.pt'
 # weights = 'D:\Codebase\lip_reading_project_public\sentence_lip_reading\weights\lrw_resnet18_dctcn_video.pth'
-weights = 'D:\\Codebase\\lip_reading_project_public\\sentence_lip_reading\\weights\\new_models1_loss_1.2722039222717285_wer_0.9773333333333334_cer_0.5575882184214666.pt'
+# weights = 'D:\\Codebase\\lip_reading_project_public\\sentence_lip_reading\\weights\\s1s2epoch50_loss_1.4154406785964966_wer_0.9816666666666667_cer_0.6261149317486894.pt'
+# weights = 'D:\\Codebase\\lip_reading_project_public\\sentence_lip_reading\\weights\\both_model_loss_1.4674739837646484_wer_0.9947222222222221_cer_0.6225112418627975.pt'

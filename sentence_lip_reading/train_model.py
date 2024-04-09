@@ -20,6 +20,8 @@ if __name__ == '__main__':
 show = False
 
 
+
+
 ###################################################################################
 def decode_ctc(array):
     # Convert one hot encoder to tensor with corresponding index

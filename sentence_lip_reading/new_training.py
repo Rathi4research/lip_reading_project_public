@@ -1,191 +1,228 @@
 import torch
-import torchaudio
-from torch.utils.data import Dataset, DataLoader
-from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor
-import jiwer
-from transformers.models.clap.convert_clap_original_pytorch_to_hf import processor
-from torchvision import transforms, models
-from PIL import Image
+from torch.utils.data import DataLoader, TensorDataset
+from transformers import BertForSequenceClassification, BertTokenizer
+import torch.optim as optim
+import ffmpeg
+import os
+import librosa
+import cv2
+import numpy as np
+from moviepy.editor import VideoFileClip
+from transformers import AutoTokenizer
 
-def extract_features(video_file_path):
-    # Here you would implement your feature extraction logic using torchvision or any other library
-    # For example, you can use a pre-trained CNN model to extract features from video frames
+def load_training_data(driverfile):
+    video_files = []
+    transcriptions = []
+    with open(driverfile, 'r') as f:
+        for line in f:
+            video_file, transcription = line.strip().split('|')
+            video_files.append(video_file)
+            transcriptions.append(transcription)
+    return video_files, transcriptions
 
-    # Load pre-trained ResNet model
-    model = models.resnet50(pretrained=True)
-    # Remove the final classification layer
-    model = torch.nn.Sequential(*(list(model.children())[:-1]))
-    # Set model to evaluation mode
-    model.eval()
+def extract_frames_from_video(video_path,frames_dir, needwrite=False):
+    os.makedirs(frames_dir, exist_ok=True)
+    # Capture video using OpenCV
+    cap = cv2.VideoCapture(video_path)
+    frame_count = 0
+    # Read frames and save as images
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        frame_path = os.path.join(frames_dir, f'frame{frame_count}.png')
+        cv2.imwrite(frame_path, frame)
+        frame_count += 1
 
-    # Define image transformations
-    preprocess = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-    ])
+    cap.release()
+    return frame_count
 
-    # Extract features from each frame of the video
-    features = []
-    # For simplicity, let's assume each frame is represented as an image file
-    for frame_path in video_file_path:  # You may need to adjust this based on your video processing library
-        image = Image.open(frame_path)
-        image = preprocess(image)
-        with torch.no_grad():
-            feature = model(image.unsqueeze(0))
-        features.append(feature.squeeze(0))
+def extract_audio_from_video(video_path,audio_dir,audio_filename, needwrite=False):
+    video = VideoFileClip(video_path)
+    audio = video.audio
+    audio_file_path = os.path.join(audio_dir,audio_filename)
+    audio.write_audiofile(audio_file_path)
+    audio, sr = librosa.load(audio_file_path, sr=16000)  # Adjust sample rate as needed
 
-    return torch.stack(features)
+def preprocess_video(video_path):
+    directory, file = os.path.split(video_path)
+    folder_name = os.path.basename(directory)
+    file_name = str(file).replace('.mp4','')
+    training_root_dir = 'D:\Codebase\lip_reading_project_public\sentence_lip_reading\lrs2_training_video_dir'
+    # Use ffmpeg to extract frames from the video
+    print("Extracting frames from the video: " + video_path)
+    frames_dir = os.path.join(training_root_dir,folder_name,file_name,'frames')
+    audio_dir = os.path.join(training_root_dir,folder_name,file_name,'audio')
+    audio_filename = file_name + '.wav'
+    print(f'Writing frames to the directory %s', frames_dir)
+    os.makedirs(frames_dir, exist_ok=True)
+    os.makedirs(audio_dir, exist_ok=True)
+
+    cap = cv2.VideoCapture(video_path)
+    frame_count = 0
+    # Read frames and save as images
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        frame_path = os.path.join(frames_dir, f'frame{frame_count}.png')
+        cv2.imwrite(frame_path, frame)
+        frame_count += 1
+
+    cap.release()
+
+    print("Frames directory: " + frames_dir)
+
+    processed_frames = []
+    for i in range(frame_count):
+        frame_path = os.path.join(frames_dir, f'frame{i}.png')
+        frame = cv2.imread(frame_path)
+        frame = cv2.resize(frame, (224, 224))  # Resize frame to 224x224
+        frame = frame.astype(np.float32) / 255.0  # Normalize pixel values
+        processed_frames.append(frame)
+
+    return processed_frames
+
+def extract_audio_features(video_path):
+
+    directory, file = os.path.split(video_path)
+    folder_name = os.path.basename(directory)
+    file_name = str(file).replace('.mp4','')
+    training_root_dir = 'D:\Codebase\lip_reading_project_public\sentence_lip_reading\lrs2_training_video_dir'
+    # Use ffmpeg to extract frames from the video
+    print("Extracting frames from the video: " + video_path)
+    audio_filename = file_name + '.wav'
+    audio_dir = os.path.join(training_root_dir,folder_name,file_name,'audio')
+    os.makedirs(audio_dir, exist_ok=True)
+
+    video = VideoFileClip(video_path)
+    audio = video.audio
+    audio_file_path = os.path.join(audio_dir,audio_filename)
+    audio.write_audiofile(audio_file_path)
+    audio, sr = librosa.load(audio_file_path, sr=16000)  # Adjust sample rate as needed
+    # Extract audio features (e.g., MFCCs, spectrograms, etc.)
+    return audio
+
+# Initialize the model
+num_classes = 2  # Example, replace with your actual number of classes
+model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=num_classes)
+tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+
+# Define optimizer and loss function
+optimizer = optim.Adam(model.parameters(), lr=1e-5)
+loss_fn = torch.nn.CrossEntropyLoss()
+
+visual_test_data = [
+    [np.array([[1, 2, 3], [4, 5, 6]]), np.array([[7, 8, 9], [10, 11, 12]])],  # Frames of video 1
+    [np.array([[13, 14, 15], [16, 17, 18]]), np.array([[19, 20, 21], [22, 23, 24]])],  # Frames of video 2
+    # Frames of other videos...
+]
 
 
-# Define a custom dataset for loading video files and their corresponding texts
-class LipReadingDataset(Dataset):
-    def __init__(self, video_files, texts,tokenizer):
-        self.video_files = video_files
-        self.texts = texts
-        self.tokenizer = tokenizer
-
-    def __len__(self):
-        return len(self.video_files)
-
-    def __getitem__(self, idx):
-        # Load video file and extract features
-        # You need to implement this part based on the library you use for video processing
-
-        # For demonstration purposes, let's assume you have a function to extract features
-        features = extract_features(self.video_files[idx])
-
-        # Tokenize the text
-        text = self.texts[idx]
-        tokens = self.tokenizer.tokenize(text)
-        token_ids = self.tokenizer.convert_tokens_to_ids(tokens)
-
-        return features, text
-
-# Define a function to calculate Word Error Rate (WER)
-def calculate_wer(reference, hypothesis):
-    return jiwer.wer(reference, hypothesis)
-
-# Define a function to calculate Character Error Rate (CER)
-def calculate_cer(reference, hypothesis):
-    return jiwer.cer(reference, hypothesis)
-
-# Define the lip reading model using Transformer architecture
-class LipReadingModel(torch.nn.Module):
-    def __init__(self, num_classes):
-        super(LipReadingModel, self).__init__()
-        self.processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base-960h")
-        self.model = Wav2Vec2ForCTC.from_pretrained("facebook/wav2vec2-base-960h")
-        self.fc = torch.nn.Linear(self.model.config.hidden_size, num_classes)
-
-    def forward(self, inputs):
-        input_values = self.processor(inputs, return_tensors="pt", padding=True, truncation=True)["input_values"]
-        logits = self.model(input_values).logits
-        output = self.fc(logits)
-        return output
-
-# Training
-def train_model(model, train_loader, criterion, optimizer, device):
+# Training loop
+epochs = 5
+for epoch in range(epochs):
     model.train()
-    total_loss = 0.0
-    for inputs, targets in train_loader:
-        inputs, targets = inputs.to(device), targets.to(device)
+    total_loss = 0
+
+    # Load training data
+    data_dir = 'train_data'  # Directory containing training data
+    video_files, transcriptions = load_training_data('D:\Codebase\lip_reading_project_public\sentence_lip_reading\lrwinputlist_1.txt')
+    print("Number for videos for training: " + str(len(video_files)))
+    print("Number for transcriptions for training: " + str(len(transcriptions)))
+    visual_data = []
+    audio_data = []
+    for video_file in video_files:
+        frames = preprocess_video(video_file)
+        audio_features = extract_audio_features(video_file)
+        visual_data.append(frames)
+        audio_data.append(audio_features)
+
+    # max_length = max(len(seq) for seq in visual_data)
+    # Pad or truncate sequences to the maximum length
+    # padded_visual_data = [seq + [0] * (max_length - len(seq)) for seq in visual_data]
+    # visual_tensor = torch.tensor(padded_visual_data)
+
+    max_length = max(len(seq) for seq in audio_data)
+    padded_audio_data = [np.pad(seq, (0, max_length - len(seq))) for seq in audio_data]
+    audio_tensor = torch.tensor(padded_audio_data)
+    # audio_data = torch.tensor(audio_data)
+    max_frames = max(len(video) for video in visual_data)
+
+    padded_visual_data = [
+        video + [np.zeros_like(video[0])] * (max_frames - len(video))
+        if len(video) < max_frames
+        else video[:max_frames]
+        for video in visual_data
+    ]
+    # Convert padded_visual_data to a tensor
+    visual_tensor = torch.tensor(padded_visual_data)
+
+    max_length = 10  # Update with the desired maximum length
+
+    # Tokenize each transcription and pad or truncate it to the maximum length
+    encoded_transcriptions = [tokenizer.encode(transcription, add_special_tokens=True, max_length=max_length, truncation=True) for transcription in transcriptions]
+
+    # Pad or truncate the token sequences to ensure consistency
+    padded_encoded_transcriptions = [seq + [0] * (max_length - len(seq)) for seq in encoded_transcriptions]
+
+    # Convert the list of padded tokenized transcriptions into a tensor
+    labels_tensor = torch.tensor(padded_encoded_transcriptions)
+
+    train_dataset = TensorDataset(visual_tensor, audio_tensor, labels_tensor)
+    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+
+    for batch in train_loader:
         optimizer.zero_grad()
-        outputs = model(inputs)
-        loss = criterion(outputs.transpose(1, 2), targets)
+        visual_inputs, audio_inputs, labels = batch
+        # Preprocess visual and audio inputs (e.g., tokenize text, normalize audio features)
+        # Concatenate visual and audio inputs
+        # Step 1: Check the shapes
+        print("Visual inputs shape:", visual_inputs.shape)
+        print("Audio inputs shape:", audio_inputs.shape)
+
+        audio_inputs = audio_inputs.unsqueeze(1).unsqueeze(2).unsqueeze(3)
+        combined_inputs = torch.cat((visual_inputs, audio_inputs), dim=1)
+
+        inputs = tokenizer(combined_inputs, return_tensors='pt', padding=True, truncation=True)
+        outputs = model(**inputs, labels=labels)
+        loss = outputs.loss
         loss.backward()
         optimizer.step()
         total_loss += loss.item()
-    return total_loss / len(train_loader)
+    avg_loss = total_loss / len(train_loader)
+    print(f'Epoch {epoch+1}/{epochs}, Loss: {avg_loss:.4f}')
 
-# Evaluation
-def evaluate_model(model, val_loader, criterion, device):
-    model.eval()
-    total_loss = 0.0
-    total_wer = 0.0
-    total_cer = 0.0
-    total_samples = 0
+# Save the trained model
+model_file = 'lrwfirst_model.pth'
+torch.save(model.state_dict(), model_file)
+print(f'Model %s is created successful ',model_file)
+print("Terminating...")
+exit(0)
+# Step 6: Prediction
+
+# Load the saved model
+model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=num_classes)
+model.load_state_dict(torch.load('lip_reading_model.pth'))
+model.eval()
+
+# Predict text from video
+def predict_text(video_path):
+    frames = preprocess_video(video_path)
+    audio_features = extract_audio_features(video_path)
+    inputs = tokenizer(frames, return_tensors='pt', padding=True, truncation=True)
+    audio_inputs = tokenizer(audio_features, return_tensors='pt', padding=True, truncation=True)
+    combined_inputs = {key: torch.cat((inputs[key], audio_inputs[key]), dim=1) for key in inputs}
     with torch.no_grad():
-        for inputs, targets in val_loader:
-            inputs, targets = inputs.to(device), targets.to(device)
-            outputs = model(inputs)
-            loss = criterion(outputs.transpose(1, 2), targets)
-            total_loss += loss.item()
-            predictions = torch.argmax(outputs, dim=-1)
-            for pred, target in zip(predictions, targets):
-                pred_text = processor.decode(pred)
-                target_text = processor.decode(target)
-                total_wer += calculate_wer(target_text, pred_text)
-                total_cer += calculate_cer(target_text, pred_text)
-                total_samples += 1
-    avg_loss = total_loss / len(val_loader)
-    avg_wer = total_wer / total_samples
-    avg_cer = total_cer / total_samples
-    return avg_loss, avg_wer, avg_cer
-
-# Main training loop
-def train():
-    # Initialize model
-    tokenizer = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base-960h")
-    model = LipReadingModel(num_classes=len(tokenizer.vocab_size))
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.to(device)
-
-    # Define optimizer and loss function
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-    criterion = torch.nn.CTCLoss(blank=0)
-
-    # Define data loaders
-    train_dataset = LipReadingDataset(train_video_files, train_texts,tokenizer)
-    train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
-    val_dataset = LipReadingDataset(val_video_files, val_texts,tokenizer)
-    val_loader = DataLoader(val_dataset, batch_size=16, shuffle=False)
-
-    # Training loop
-    num_epochs = 10
-    for epoch in range(num_epochs):
-        train_loss = train_model(model, train_loader, criterion, optimizer, device)
-        val_loss, val_wer, val_cer = evaluate_model(model, val_loader, criterion, device)
-        print(f"Epoch {epoch+1}/{num_epochs}, Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Val WER: {val_wer:.4f}, Val CER: {val_cer:.4f}")
-
-    # Save the trained model
-    torch.save(model.state_dict(), "lip_reading_model.pt")
-
-# Load the trained model
-def load_model(model_path):
-    tokenizer = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base-960h")
-    model = LipReadingModel(num_classes=len(tokenizer.vocab_size))
-    model.load_state_dict(torch.load(model_path))
-    return model
-
-# Prediction
-def predict_text(model, video_file):
-    # Load the video file and extract features
-    features = extract_features(video_file)
-
-    # Forward pass through the model
-    with torch.no_grad():
-        output = model(features)
-        predictions = torch.argmax(output, dim=-1)
-
-    # Decode the predictions
-    predicted_text = processor.decode(predictions[0])
-    return predicted_text
+        outputs = model(**combined_inputs)
+        predictions = torch.argmax(outputs.logits, dim=1)
+        predicted_text = tokenizer.decode(predictions)
+        return predicted_text
 
 
-train_video_files = ["train_video1.mp4", "train_video2.mp4", ...]  # List of paths to training video files
-train_texts = ["text1", "text2", ...]  # List of corresponding texts for training videos
 
-val_video_files = ["val_video1.mp4", "val_video2.mp4", ...]  # List of paths to validation video files
-val_texts = ["text1", "text2", ...]
-
+exit(0)
 # Example usage
-# Train the model
-train()
-
-# Load the trained model
-model = load_model("lip_reading_model.pt")
-
-# Predict text in a video file
-predicted_text = predict_text(model, "test_video.mp4")
-print("Predicted text:", predicted_text)
+video_path = 'example_video.mp4'
+predicted_text = predict_text(video_path)
+print(predicted_text)

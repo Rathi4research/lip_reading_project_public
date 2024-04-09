@@ -22,15 +22,19 @@ from statistics import mean
 # Path for the videos
 list_paths = [
     # 'D:\Codebase\\lip_reading_project_public\\sentence_lip_reading\\videos_for_demo\\id2_vcd_swwp2s.mpg'
-    'D:\\Codebase\\lip_reading_project_public\\sentence_lip_reading\\videos_for_training\\s1\\swwj1a\\swwj1a.mpg'
+    # 'D:\\Codebase\\lip_reading_project_public\\sentence_lip_reading\\videos_for_training\\s1\\lgifzn\\lgifzn.mpg'
+    # 'D:\\Codebase\\lip_reading_project_public\\sentence_lip_reading\\videos_for_training\\s1\\brif6p\\brif6p.mpg'
+    'D:\\Codebase\\lip_reading_project_public\\sentence_lip_reading\\videos_for_training\\s2\\bbas2a\\bbas2a.mpg'
+    # 'D:\\Codebase\\lip_reading_project_public\\sentence_lip_reading\\videos_for_training\\s1\\swwj1a\\swwj1a.mpg'
     # 'D:\\Codebase\\lip_reading_project_public\\sentence_lip_reading\\videos_for_training\\s1\\bbaf2n\\bbaf2n.mpg'
              ]
 
 
 # List the actual spoken sentences in the videos above
 # truth_list = ['SET WHITE WITH P TWO SOON', 'PLACE RED IN A ZERO NOW']
-truth_list = ['SET WHITE WITH J ONE AGAIN','BIN BLUE AT F TWO NOW', 'PLACE RED IN A ZERO NOW']
-
+# truth_list = ['LAY GREEN IN F ZERO NOW','BIN RED IN F SIX PLEASE','SET WHITE WITH J ONE AGAIN','BIN BLUE AT F TWO NOW', 'PLACE RED IN A ZERO NOW']
+# truth_list = ['BIN RED IN F SIX PLEASE']
+truth_list = ['BIN BLUE AT S TWO AGAIN']
 # Path to the shape predictor
 shape_predictor_path = 'D:\Codebase\lip_reading_project_public\sentence_lip_reading\shape_predictor_68_face_landmarks.dat'
 
