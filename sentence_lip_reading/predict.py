@@ -20,15 +20,16 @@ from statistics import mean
 ##########################################################################
 
 # Path for the videos
-list_paths = [  './sentence_lip_reading/videos_for_demo/id2_vcd_swwp2s.mpg',
-                './sentence_lip_reading/videos_for_demo//id23_vcd_priazn.mpg'
+list_paths = [  '/Users/dnallusamy/Codebase/lip_reading_project_public/sentence_lip_reading/videos_for_demo/id2_vcd_swwp2s.mpg',
+                '/Users/dnallusamy/Codebase/lip_reading_project_public/sentence_lip_reading/videos_for_demo//id23_vcd_priazn.mpg'
             ]
 
 # List the actual spoken sentences in the videos above
 truth_list = ['SET WHITE WITH P TWO SOON', 'PLACE RED IN A ZERO NOW']
 
 # Path to the shape predictor
-shape_predictor_path = './sentence_lip_reading/shape_predictor_68_face_landmarks.dat'
+# shape_predictor_path = './sentence_lip_reading/shape_predictor_68_face_landmarks.dat'
+shape_predictor_path = '/Users/dnallusamy/Codebase/lip_reading_project_public/sentence_lip_reading/shape_predictor_68_face_landmarks.dat'
 
 ##########################################################################
 ##########################################################################
@@ -76,17 +77,23 @@ if (__name__ == '__main__'):
         model = LipReadingNetwork(transformer=False, lstm=False, bidir=True)
     else:
         print('ERROR: cannot recognise model in option.py')
-    model = model.cuda()
+    #model = model.cuda()
 
     # Uncomment to see the model structure
     #summary(model, (3, 75, 64, 128))
 
     
-    net = nn.DataParallel(model).cuda()
+    net = nn.DataParallel(model)
     model_dict = model.state_dict()
 
     # Load the weight files
-    pretrained_dict = torch.load(opt.weights)
+    import os
+    absolute_path = os.path.dirname(__file__)
+    weightspathref = "weights/model_unseen_dense3d_transformer_loss_0.7470988631248474_wer_0.2406666666666667_cer_0.1106539869955016.pt"
+    fullpath = os.path.join(absolute_path,weightspathref)
+
+
+    pretrained_dict = torch.load(fullpath,torch.device('cpu'))
     pretrained_dict = {k: v for k, v in pretrained_dict.items() if
                         k in model_dict.keys() and v.size() == model_dict[k].size()}
     model_dict.update(pretrained_dict)
@@ -104,7 +111,8 @@ if (__name__ == '__main__'):
         vid = [cv2.resize(im, (128, 64), interpolation=cv2.INTER_LANCZOS4) for im in np_vid]
 
         # Convert to tensor and reshape to feed the model
-        vid = torch.FloatTensor(vid).cuda()
+        # vid = torch.FloatTensor(vid).cuda()
+        vid = torch.FloatTensor(vid)
         vid = vid.permute(3, 0, 1, 2)
         vid = vid.reshape(1, 3, 75, 64, 128)
 

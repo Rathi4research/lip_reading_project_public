@@ -24,7 +24,8 @@ from array_text_conversion import *
 #########################################################################
 
 
-PATH_TO_SHAPE_PREDICTOR = "./sentence_lip_reading/shape_predictor_68_face_landmarks.dat"
+# PATH_TO_SHAPE_PREDICTOR = "./sentence_lip_reading/shape_predictor_68_face_landmarks.dat"
+PATH_TO_SHAPE_PREDICTOR = "/Users/dnallusamy/Codebase/lip_reading_project_public/sentence_lip_reading/shape_predictor_68_face_landmarks.dat"
 
 triggered = False
 
@@ -134,13 +135,15 @@ if __name__ == '__main__':
     print("[INFO] Loading the model...")
     opt = __import__('options')
     model = LipReadingNetwork()
-    model = model.cuda()
-    net = nn.DataParallel(model).cuda()
+    model = model
+    # model = model.cuda()
+    # net = nn.DataParallel(model).cuda()
+    net = nn.DataParallel(model)
     model_dict = model.state_dict()
 
     # Load the weight files
     print("[INFO] Loading the pretrained weights...")
-    pretrained_dict = torch.load(opt.weights)
+    pretrained_dict = torch.load(opt.weights,torch.device('cpu'))
     pretrained_dict = {k: v for k, v in pretrained_dict.items() if
                             k in model_dict.keys() and v.size() == model_dict[k].size()}
     model_dict.update(pretrained_dict)
@@ -209,7 +212,8 @@ if __name__ == '__main__':
         fps = frame_accumulator.count_fps()
         print('[INFO] Frames loaded, FPS : {}'.format(fps))
         print("[INFO] Calling the model...")
-        video =   torch.FloatTensor(frame_accumulator.video).cuda()
+        # video =   torch.FloatTensor(frame_accumulator.video).cuda()
+        video =   torch.FloatTensor(frame_accumulator.video)
         video = video.permute(3, 0, 1, 2)
         video = video.reshape(1, 3, 75, 64, 128)
 

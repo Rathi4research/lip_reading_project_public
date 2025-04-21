@@ -48,4 +48,10 @@ optimize = True
 
 # Comment these 2 lines if you want to train a new model
 model = 'transformer'
-weights = './sentence_lip_reading/weights/model_unseen_dense3d_transformer_loss_0.7470988631248474_wer_0.2406666666666667_cer_0.1106539869955016.pt'
+
+import os
+absolute_path = os.path.dirname(__file__)
+weightspathref = "weights/model_unseen_dense3d_transformer_loss_0.7470988631248474_wer_0.2406666666666667_cer_0.1106539869955016.pt"
+fullpath = os.path.join(absolute_path,weightspathref)
+# weights = './weights/model_unseen_dense3d_transformer_loss_0.7470988631248474_wer_0.2406666666666667_cer_0.1106539869955016.pt'
+weights = fullpath
